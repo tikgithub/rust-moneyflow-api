@@ -1,0 +1,11 @@
+[package]
+name = "moneyflow"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4"
+sqlx = { version = "0.8", features = [ "runtime-tokio" ,"tls-rustls","postgres","chrono"] }
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3
