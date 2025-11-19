@@ -1,4 +1,19 @@
-use sqlx::query;
+use bcrypt::{hash, DEFAULT_COST};
+use serde::{Deserialize, Serialize};
+use sqlx::{query, query_as};
+use sqlx::types::{chrono, BigDecimal};
+use crate::controller::auth::SignUpRequest;
+
+pub struct User{
+    pub id: i32,
+    pub email: String,
+    pub password: String,
+    pub firstname: String,
+    pub lastname: String,
+    pub balance: Option<BigDecimal>,
+    pub created_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
 
 pub async fn has_with_email(db: &sqlx::PgPool, email: &str) -> bool{
     query!("SELECT * FROM users WHERE email = $1", email)
@@ -8,9 +23,18 @@ pub async fn has_with_email(db: &sqlx::PgPool, email: &str) -> bool{
         .is_some()
 }
 
-pub async fn create(db: &sqlx::PgPool, email: &str, password: &str) -> bool{
-    query!("INSERT INTO users (email, password) VALUES ($1,$2) ", email, password)
+pub async fn create(db: &sqlx::PgPool, user: &SignUpRequest) -> bool{
+    let hash_password = hash(&user.password,DEFAULT_COST).unwrap();
+
+    query!("INSERT INTO users (email, password, firstname, lastname) VALUES ($1,$2, $3, $4) ", &user.email, hash_password, &user.firstname, &user.lastname)
         .execute(db)
         .await
         .is_ok()
+}
+
+pub async fn get_by_email(db: &sqlx::PgPool, email: &str) -> Option<User>{
+    query_as!(User,"SELECT id,email,password, firstname, lastname, balance, created_at, updated_at FROM users WHERE email = $1", email)
+        .fetch_optional(db)
+        .await
+        .unwrap()
 }
