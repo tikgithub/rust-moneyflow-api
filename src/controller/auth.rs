@@ -1,4 +1,3 @@
-use std::sync::{Mutex, MutexGuard};
 use actix_web::{Responder, post, web, HttpResponse};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -26,7 +25,16 @@ pub async fn sign_up(state: web::Data<AppState>, data: web::Json<SignUpRequest>)
 #[post("auth/sign-in")]
 pub async fn sign_in(state: web::Data<AppState>, data: web::Json<SignInRequest>) -> impl Responder {
     let db = state.db.lock().unwrap();
-    return "Sign-in";
+
+    let Some(user) = db::user::get_by_email(&db,&data.email).await else {
+        return HttpResponse::BadRequest().json(json!({"status":"error","message":"Invalid email"}));
+    };
+
+    if(!bcrypt::verify(&data.password, &user.password).unwrap()){
+        return HttpResponse::Unauthorized().json(json!({"status":"error","message":"Un-authorize"}));
+    };
+
+    ""
 }
 
 #[derive(Deserialize,Serialize,Debug)]
@@ -41,4 +49,11 @@ pub struct SignUpRequest {
 pub struct SignInRequest{
     pub email: String,
     pub password: String,
+}
+
+#[derive(Deserialize,Serialize, Debug)]
+pub struct Claims{
+    pub sub: u64,
+    pub exp: u64,
+    pub role: String
 }
