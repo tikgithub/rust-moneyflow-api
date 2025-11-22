@@ -1,6 +1,9 @@
 use crate::db::user;
 use crate::{AppState, db};
 use actix_web::{HttpResponse, Responder, post, web};
+//use actix_web::error::ParseError::Header;
+//use actix_web::web::Header;
+//use actix_web::web::Header;
 use jsonwebtoken::{EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -33,8 +36,9 @@ pub async fn sign_in(state: web::Data<AppState>, data: web::Json<SignInRequest>)
         return HttpResponse::BadRequest()
             .json(json!({"status":"error","message":"Invalid email"}));
     };
+    println!("User data is {:?}", user);
 
-    if (!bcrypt::verify(&data.password, &user.password).unwrap()) {
+    if !bcrypt::verify(&data.password, &user.password).unwrap() {
         return HttpResponse::Unauthorized()
             .json(json!({"status":"error","message":"Un-authorize"}));
     };
@@ -43,16 +47,16 @@ pub async fn sign_in(state: web::Data<AppState>, data: web::Json<SignInRequest>)
         sub: user.id,
         exp: 10000000000,
         role: "user".to_string(),
-        exp: 10000000000,
     };
 
     let token = jsonwebtoken::encode(
-        &Header.default(),
+        &Header::default(),
         &claims,
         &EncodingKey::from_secret(state.jwt_secret.as_bytes()),
-    ).unwrap();
+    )
+    .unwrap();
 
-    ""
+    HttpResponse::Ok().json(json!({ "status":"success","token": token }))
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -71,7 +75,7 @@ pub struct SignInRequest {
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Claims {
-    pub sub: u64,
-    pub exp: u64,
+    pub sub: i64,
+    pub exp: i64,
     pub role: String,
 }
